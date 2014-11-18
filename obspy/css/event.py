@@ -11,12 +11,31 @@ CSS bindings to ObsPy event module.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from future.builtins import *  # NOQA
+from future.utils import native_str
 
 import os
 
 import numpy as np
 
 from obspy import UTCDateTime
+
+
+def _evname(ev):
+    name = '-'
+    for desc in ev.event_descriptions:
+        if desc.type and desc.type == 'earthquake name':
+            name = desc.text or '-'
+    return name
+
+
+def _auth(node):
+    name = '-'
+    try:
+        info = node.creation_info
+        name = info.author or info.agency or '-'
+    except AttributeError:
+        name = '-'
+    return name
 
 
 def writeCSS(catalog, filename, **kwargs):
@@ -43,6 +62,11 @@ def writeCSS(catalog, filename, **kwargs):
         raise ValueError('Writing a Catalog to a file-like object in CSS '
                          'format is unsupported.')
 
+    arid = {}
+    evid = {}
+    magid = {}
+    orid = {}
+    stassid = {}
     arrival = []
     assoc = []
     event = []
@@ -53,114 +77,31 @@ def writeCSS(catalog, filename, **kwargs):
     sregion = []
     stamag = []
     stassoc = []
-    lddate = (catalog.creation_info.creation_time if catalog.creation_info else UTCDateTime()).strftime('%Y-%m-%dT%H%M%S')
+    lddate = (catalog.creation_info.creation_time if catalog.creation_info
+              else UTCDateTime()).strftime('%Y-%m-%dT%H%M%S')
     for ev in catalog:
-        arrival_line = '%-6s %17.5f %8d %8d %8d %8d %-8s %-8s %-1s %6.3f %7.2f %7.2f %7.2f %7.2f %7.2f %7.3f %10.1f %7.2f %7.2f %-1s %-2s %10.2f %-1s %-15s %8d %-17s' % (
-            # sta
-            # time
-            # arid
-            # jdate
-            # stassid
-            # chanid
-            # chan
-            # iphase
-            # stype
-            # deltim
-            # azimuth
-            # delaz
-            # slow
-            # delslo
-            # ema
-            # rect
-            # amp
-            # per
-            # logat
-            # clip
-            # fm
-            # snr
-            # qual
-            # auth
-            # commid
-            lddate)
-        assoc_line = '%8d %8d %-6s %-8s %4.2f %8.3f %7.2f %7.2f %-1s %7.1f %-1s %7.2f %-1s %7.1f %6.3f %-15s %8d %-17s' % (
-            # arid
-            # orid
-            # sta
-            # phase
-            # belief
-            # delta
-            # seaz
-            # esaz
-            # timeres
-            # timedef
-            # azres
-            # azdef
-            # slores
-            # slodef
-            # emares
-            # wgt
-            # vmodel
-            # commid
-            lddate)
+        this_evid = evid.setdefault(ev.resource_id, len(evid) + 1)
+        commid = -1  # FIXME: Use addComments()
+        prefor = orid.setdefault(ev.preferred_origin().resource_id,
+                                 len(orid) + 1)
         event_line = '%8d %-15s %8d %-15s %8d %-17s' % (
-            # evid
-            # evname
-            # prefor
-            # auth
-            # commid
+            this_evid,
+            _evname(ev),
+            prefor,
+            _auth(ev),
+            commid,
             lddate)
-        netmag_line = '%8d %-8s %8d %8d %-6s %8d %7.2f %7.2f %-15s %8d %-17s' % (
-            # magid
-            # net
-            # orid
-            # evid
-            # magtype
-            # nsta
-            # magnitude
-            # uncertainty
-            # auth
-            # commid
-            lddate)
-        origerr_line = '%8d %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %9.4f %9.4f %9.4f %6.2f %9.4f %8.2f %5.3f %8d %-17s' % (
-            # orid
-            # sxx
-            # syy
-            # szz
-            # stt
-            # sxy
-            # sxz
-            # syz
-            # stx
-            # sty
-            # stz
-            # sdobs
-            # smajax
-            # sminax
-            # strike
-            # sdepth
-            # stime
-            # conf
-            # commid
-            lddate)
+        event.append(event_line)
+
         remark_line = '%8d %8d %-80s %-17s' % (
             # commid
             # lineno
             # remark
             lddate)
-        stamag_line = '%8d %-6s %8d %8d %8d %-8s %-6s %7.2f %7.2f %-15s %8d %-17s' % (
-            # magid
-            # sta
-            # arid
-            # orid
-            # evid
-            # phase
-            # magtype
-            # magnitude
-            # uncertainty
-            # auth
-            # commid
-            lddate)
-        stassoc_line = '%8d %-6s %-7s %-32s %7.2f %7.2f %9.4f %9.4f %9.4f %17.5f %7.2f %7.2f %7.2f %-15s %8d %-17s' % (
+
+        commid = -1  # FIXME: Use addComments()
+        stassoc_line = ('%8d %-6s %-7s %-32s %7.2f %7.2f %9.4f %9.4f %9.4f '
+                        '%17.5f %7.2f %7.2f %7.2f %-15s %8d %-17s') % (
             # stassid
             # sta
             # etype
@@ -175,16 +116,21 @@ def writeCSS(catalog, filename, **kwargs):
             # ims
             # iml
             # auth
-            # commid
+            commid,
             lddate)
+
         for orig in ev:
-            origin_line = '%9.4f %9.4f %9.4f %17.5f %8d %8d %8d %4d %4d %4d %8d %8d %-7s %9.4f %-1s %7.2f %8d %7.2f %8d %7.2f %8d %-15s %-15s %8d %-17s' % (
+            this_orid = orid.setdefault(orig.resource_id, len(orid) + 1)
+            commid = -1  # FIXME: Use addComments()
+            origin_line = ('%9.4f %9.4f %9.4f %17.5f %8d %8d %8d %4d %4d %4d '
+                           '%8d %8d %-7s %9.4f %-1s %7.2f %8d %7.2f %8d %7.2f '
+                           '%8d %-15s %-15s %8d %-17s') % (
                 orig.latitude,
                 orig.longitude,
                 orig.depth / 1000.0,
                 orig.time,
-                # orid
-                # evid
+                this_orid,
+                this_evid,
                 # jdate
                 # nass
                 # ndef
@@ -201,14 +147,134 @@ def writeCSS(catalog, filename, **kwargs):
                 # ml
                 # mlid
                 # algorithm
-                # auth
-                # commid
+                _auth(orig),
+                commid,
                 lddate)
+            origin.append(origin_line)
 
+            commid = -1  # FIXME: Use addComments()
+            origerr_line = ('%8d %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 '
+                            '%15.4 %15.4 %15.4 %9.4f %9.4f %9.4f %6.2f %9.4f '
+                            '%8.2f %5.3f %8d %-17s') % (
+                this_orid,
+                # sxx
+                # syy
+                # szz
+                # stt
+                # sxy
+                # sxz
+                # syz
+                # stx
+                # sty
+                # stz
+                # sdobs
+                # smajax
+                # sminax
+                # strike
+                # sdepth
+                # stime
+                # conf
+                commid,
+                lddate)
+            origerr.append(origerr_line)
+
+            for arr in orig.arrivals:
+                this_arid = arid.setdefault(arr.resource_id, len(arid) + 1)
+                commid = -1  # FIXME: Use addComments()
+                arrival_line = ('%-6s %17.5f %8d %8d %8d %8d %-8s %-8s %-1s '
+                                '%6.3f %7.2f %7.2f %7.2f %7.2f %7.2f %7.3f '
+                                '%10.1f %7.2f %7.2f %-1s %-2s %10.2f %-1s '
+                                '%-15s %8d %-17s') % (
+                    # sta
+                    # time
+                    this_arid,
+                    # jdate
+                    # stassid
+                    # chanid
+                    # chan
+                    # iphase
+                    # stype
+                    # deltim
+                    # azimuth
+                    # delaz
+                    # slow
+                    # delslo
+                    # ema
+                    # rect
+                    # amp
+                    # per
+                    # logat
+                    # clip
+                    # fm
+                    # snr
+                    # qual
+                    _auth(arr),
+                    commid,
+                    lddate)
+                arrival.append(arrival_line)
+
+                commid = -1  # FIXME: Use addComments()
+                assoc_line = ('%8d %8d %-6s %-8s %4.2f %8.3f %7.2f %7.2f %-1s '
+                              '%7.1f %-1s %7.2f %-1s %7.1f %6.3f %-15s %8d '
+                              '%-17s') % (
+                    this_arid,
+                    this_orid,
+                    # sta
+                    # phase
+                    # belief
+                    # delta
+                    # seaz
+                    # esaz
+                    # timeres
+                    # timedef
+                    # azres
+                    # azdef
+                    # slores
+                    # slodef
+                    # emares
+                    # wgt
+                    # vmodel
+                    commid,
+                    lddate)
+                assoc.append(assoc_line)
+
+                if False:
+                    this_magid = magid.setdefault(mag.resource_id,
+                                                  len(magid) + 1)
+                    commid = -1  # FIXME: Use addComments()
+                    stamag_line = ('%8d %-6s %8d %8d %8d %-8s %-6s %7.2f '
+                                   '%7.2f %-15s %8d %-17s') % (
+                        this_magid,
+                        # sta
+                        this_arid,
+                        this_orid,
+                        this_evid,
+                        # phase
+                        # magtype
+                        # magnitude
+                        # uncertainty
+                        # auth
+                        commid,
+                        lddate)
+
+                    commid = -1  # FIXME: Use addComments()
+                    netmag_line = ('%8d %-8s %8d %8d %-6s %8d %7.2f %7.2f '
+                                   '%-15s %8d %-17s') % (
+                        this_magid,
+                        # net
+                        this_orid,
+                        this_evid,
+                        # magtype
+                        # nsta
+                        # magnitude
+                        # uncertainty
+                        # auth
+                        commid,
+                        lddate)
+                    netmag.append(netmag_line)
 
 # algorithm
 # amp
-# arid
 # auth
 # azdef
 # azimuth
@@ -217,7 +283,6 @@ def writeCSS(catalog, filename, **kwargs):
 # chan
 # chanid
 # clip
-# commid
 # conf
 # delaz
 # delslo
@@ -231,7 +296,6 @@ def writeCSS(catalog, filename, **kwargs):
 # emares
 # esaz
 # etype
-# evid
 # evname
 # fm
 # grn
@@ -245,7 +309,6 @@ def writeCSS(catalog, filename, **kwargs):
 # location
 # logat
 # lon
-# magid
 # magnitude
 # magtype
 # mb
@@ -259,7 +322,6 @@ def writeCSS(catalog, filename, **kwargs):
 # ndp
 # net
 # nsta
-# orid
 # per
 # phase
 # prefor
