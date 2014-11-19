@@ -95,27 +95,6 @@ def writeCSS(catalog, filename, **kwargs):
             # remark
             lddate)
 
-        commid = -1  # FIXME: Use addComments()
-        stassoc_line = ('%8d %-6.6s %-7.7s %-32.32s %7.2f %7.2f %9.4f %9.4f '
-                        '%9.4f %17.5f %7.2f %7.2f %7.2f %-15.15s %8d '
-                        '%-17.17s') % (
-            # stassid
-            # sta
-            # etype
-            # location
-            # dist
-            # azimuth
-            # lat
-            # lon
-            # depth
-            # time
-            # imb
-            # ims
-            # iml
-            # auth
-            commid,
-            lddate)
-
         for orig in ev:
             this_orid = orid.setdefault(orig.resource_id, len(orid) + 1)
             commid = -1  # FIXME: Use addComments()
@@ -192,7 +171,7 @@ def writeCSS(catalog, filename, **kwargs):
                     # iphase
                     # stype
                     # deltim
-                    # azimuth
+                    arr.azimuth if arr.azimuth is not None else -1,
                     # delaz
                     # slow
                     # delslo
@@ -234,6 +213,27 @@ def writeCSS(catalog, filename, **kwargs):
                     commid,
                     lddate)
                 assoc.append(assoc_line)
+
+                commid = -1  # FIXME: Use addComments()
+                stassoc_line = ('%8d %-6.6s %-7.7s %-32.32s %7.2f %7.2f %9.4f '
+                                '%9.4f %9.4f %17.5f %7.2f %7.2f %7.2f '
+                                '%-15.15s %8d %-17.17s') % (
+                    # stassid
+                    # sta
+                    # etype
+                    # location
+                    # dist
+                    arr.azimuth if arr.azimuth is not None else -1,
+                    # lat
+                    # lon
+                    # depth
+                    # time
+                    # imb
+                    # ims
+                    # iml
+                    # auth
+                    commid,
+                    lddate)
 
                 if False:
                     this_magid = magid.setdefault(mag.resource_id,
