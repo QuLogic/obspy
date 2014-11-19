@@ -10,5 +10,6 @@
        :nosignatures:
 
        core
+       event
 
     .. comment to end block
