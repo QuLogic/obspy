@@ -50,6 +50,13 @@ def _auth(node):
     return name
 
 
+def _yearday(time):
+    if time:
+        return time.year * 1000 + time.julday
+    else:
+        return -1
+
+
 def writeCSS(catalog, filename, **kwargs):
     """
     Writes a Catalog to a CSS database.
@@ -106,7 +113,7 @@ def writeCSS(catalog, filename, **kwargs):
             lddate)
         event.append(event_line)
 
-        for orig in ev:
+        for orig in ev.origins:
             this_orid = orid.setdefault(orig.resource_id, len(orid) + 1)
             this_commid, commid = _add_remarks(orig, commid, remark, lddate)
             origin_line = ('%9.4f %9.4f %9.4f %17.5f %8d %8d %8d %4d %4d %4d '
@@ -118,12 +125,12 @@ def writeCSS(catalog, filename, **kwargs):
                 orig.time,
                 this_orid,
                 this_evid,
-                # jdate
-                # nass
-                # ndef
-                # ndp
-                # grn
-                # srn
+                _yearday(orig.time.julday),
+                len(orig.arrivals) or -1,  # nass
+                len(orig.arrivals) or -1,  # ndef
+                -1,  # ndp
+                -1,  # grn
+                -1,  # srn
                 # etype
                 # depdp
                 # dtype
