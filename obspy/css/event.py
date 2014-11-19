@@ -16,6 +16,22 @@ from future.utils import native_str
 from obspy import UTCDateTime
 
 
+def _add_remarks(node, commid, remark, lddate):
+    if node.comments:
+        this_commid = commid = commid + 1
+        for lineno, comment in enumerate(node.comments):
+            remark_line = '%8d %8d %-80.80s %-17.17s' % (
+                this_commid,
+                lineno + 1,
+                comment.text.replace('\n', ' '),
+                lddate)
+            remark.append(remark_line)
+    else:
+        this_commid = -1
+
+    return this_commid, commid
+
+
 def _evname(ev):
     name = '-'
     for desc in ev.event_descriptions:
@@ -59,6 +75,7 @@ def writeCSS(catalog, filename, **kwargs):
                          'format is unsupported.')
 
     arid = {}
+    commid = 0
     evid = {}
     magid = {}
     orid = {}
@@ -77,7 +94,7 @@ def writeCSS(catalog, filename, **kwargs):
               else UTCDateTime()).strftime('%Y-%m-%dT%H%M%S')
     for ev in catalog:
         this_evid = evid.setdefault(ev.resource_id, len(evid) + 1)
-        commid = -1  # FIXME: Use addComments()
+        this_commid, commid = _add_remarks(ev, commid, remark, lddate)
         prefor = orid.setdefault(ev.preferred_origin().resource_id,
                                  len(orid) + 1)
         event_line = '%8d %-15.15s %8d %-15.15s %8d %-17.17s' % (
@@ -85,19 +102,13 @@ def writeCSS(catalog, filename, **kwargs):
             _evname(ev),
             prefor,
             _auth(ev),
-            commid,
+            this_commid,
             lddate)
         event.append(event_line)
 
-        remark_line = '%8d %8d %-80.80s %-17.17s' % (
-            # commid
-            # lineno
-            # remark
-            lddate)
-
         for orig in ev:
             this_orid = orid.setdefault(orig.resource_id, len(orid) + 1)
-            commid = -1  # FIXME: Use addComments()
+            this_commid, commid = _add_remarks(orig, commid, remark, lddate)
             origin_line = ('%9.4f %9.4f %9.4f %17.5f %8d %8d %8d %4d %4d %4d '
                            '%8d %8d %-7.7s %9.4f %-1.1s %7.2f %8d %7.2f %8d '
                            '%7.2f %8d %-15.15s %-15.15s %8d %-17.17s') % (
@@ -124,11 +135,12 @@ def writeCSS(catalog, filename, **kwargs):
                 # mlid
                 # algorithm
                 _auth(orig),
-                commid,
+                this_commid,
                 lddate)
             origin.append(origin_line)
 
-            commid = -1  # FIXME: Use addComments()
+            # this_commid, commid = _add_remarks(?, commid, remark, lddate)
+            this_commid = -1
             origerr_line = ('%8d %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 %15.4 '
                             '%15.4 %15.4 %15.4 %9.4f %9.4f %9.4f %6.2f %9.4f '
                             '%8.2f %5.3f %8d %-17.17s') % (
@@ -150,13 +162,13 @@ def writeCSS(catalog, filename, **kwargs):
                 # sdepth
                 # stime
                 # conf
-                commid,
+                this_commid,
                 lddate)
             origerr.append(origerr_line)
 
             for arr in orig.arrivals:
                 this_arid = arid.setdefault(arr.resource_id, len(arid) + 1)
-                commid = -1  # FIXME: Use addComments()
+                this_commid, commid = _add_remarks(arr, commid, remark, lddate)
                 arrival_line = ('%-6.6s %17.5f %8d %8d %8d %8d %-8.8s %-8.8s '
                                 '%-1.1s %6.3f %7.2f %7.2f %7.2f %7.2f %7.2f '
                                 '%7.3f %10.1f %7.2f %7.2f %-1.1s %-2.2s '
@@ -185,11 +197,12 @@ def writeCSS(catalog, filename, **kwargs):
                     # snr
                     # qual
                     _auth(arr),
-                    commid,
+                    this_commid,
                     lddate)
                 arrival.append(arrival_line)
 
-                commid = -1  # FIXME: Use addComments()
+                # this_commid, commid = _add_remarks(?, commid, remark, lddate)
+                this_commid = -1
                 assoc_line = ('%8d %8d %-6.6s %-8.8s %4.2f %8.3f %7.2f %7.2f '
                               '%-1.1s %7.1f %-1.1s %7.2f %-1.1s %7.1f %6.3f '
                               '%-15.15s %8d %-17.17s') % (
@@ -210,11 +223,12 @@ def writeCSS(catalog, filename, **kwargs):
                     # emares
                     # wgt
                     # vmodel
-                    commid,
+                    this_commid,
                     lddate)
                 assoc.append(assoc_line)
 
-                commid = -1  # FIXME: Use addComments()
+                # this_commid, commid = _add_remarks(?, commid, remark, lddate)
+                this_commid = -1
                 stassoc_line = ('%8d %-6.6s %-7.7s %-32.32s %7.2f %7.2f %9.4f '
                                 '%9.4f %9.4f %17.5f %7.2f %7.2f %7.2f '
                                 '%-15.15s %8d %-17.17s') % (
@@ -232,13 +246,15 @@ def writeCSS(catalog, filename, **kwargs):
                     # ims
                     # iml
                     # auth
-                    commid,
+                    this_commid,
                     lddate)
 
                 if False:
                     this_magid = magid.setdefault(mag.resource_id,
                                                   len(magid) + 1)
-                    commid = -1  # FIXME: Use addComments()
+                    # this_commid, commid = _add_remarks(?, commid, remark,
+                    #                                    lddate)
+                    this_commid = -1
                     stamag_line = ('%8d %-6.6s %8d %8d %8d %-8.8s %-6.6s '
                                    '%7.2f %7.2f %-15.15s %8d %-17.17s') % (
                         this_magid,
@@ -251,10 +267,12 @@ def writeCSS(catalog, filename, **kwargs):
                         # magnitude
                         # uncertainty
                         # auth
-                        commid,
+                        this_commid,
                         lddate)
 
-                    commid = -1  # FIXME: Use addComments()
+                    # this_commid, commid = _add_remarks(?, commid, remark,
+                    #                                    lddate)
+                    this_commid = -1
                     netmag_line = ('%8d %-8.8s %8d %8d %-6.6s %8d %7.2f %7.2f '
                                    '%-15.15s %8d %-17.17s') % (
                         this_magid,
@@ -266,7 +284,7 @@ def writeCSS(catalog, filename, **kwargs):
                         # magnitude
                         # uncertainty
                         # auth
-                        commid,
+                        this_commid,
                         lddate)
                     netmag.append(netmag_line)
 
@@ -274,7 +292,6 @@ def writeCSS(catalog, filename, **kwargs):
 # amp
 # auth
 # azdef
-# azimuth
 # azres
 # belief
 # chan
