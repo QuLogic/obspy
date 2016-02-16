@@ -10,21 +10,10 @@ matrix:
     # do one build run with our minimum dependencies
     # (or, well, at least the lowest version number that is available through
     #  anaconda..)
-    #- os: linux
-    #  env: PYTHON_VERSION=2.7 MINIMUM_DEPENDENCIES="True"
     - os: linux
       env: PYTHON_VERSION=2.7
-    #- os: linux
-    #  env: PYTHON_VERSION=3.3
-    #- os: linux
-    #  env: PYTHON_VERSION=3.4
     - os: linux
       env: PYTHON_VERSION=3.5
-
-    #- os: osx
-    #  env: PYTHON_VERSION=2.7
-    #- os: osx
-    #  env: PYTHON_VERSION=3.5
 
 sudo: false
 
@@ -142,8 +131,8 @@ script:
   - cd empty
   - MODULELIST=`python -c "MODULES = ['signal', 'imaging', 'core', 'taup']; print('obspy.' + ',obspy.'.join(MODULES))"`
   - coverage run --rcfile=.coveragerc --source=$MODULELIST -m obspy.scripts.runtests -n travis-ci -r -t -s 300 --profile signal imaging core taup
-  - ls
-  - ls ..
+  - pwd
+  - ls -lRa ..
   - python -c "import base64; print(base64.b64encode(open('obspy.pstats', 'rb').read()))"
 
 after_success:
