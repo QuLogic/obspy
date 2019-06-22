@@ -36,7 +36,6 @@ except ImportError:
            "Please install numpy first, it is needed before installing ObsPy.")
     raise ImportError(msg)
 
-import fnmatch
 import glob
 import inspect
 import os
@@ -51,7 +50,6 @@ from numpy.distutils.core import setup
 from numpy.distutils.ccompiler import get_default_compiler
 from numpy.distutils.command.build import build
 from numpy.distutils.command.install import install
-from numpy.distutils.misc_util import Configuration
 from setuptools import Extension
 
 
@@ -695,41 +693,6 @@ def get_extensions():
     return extensions
 
 
-def configuration(parent_package="", top_path=None):
-    """
-    Recursively include all non python files
-    """
-    config = Configuration("", parent_package, top_path)
-    # python files are included per default, we only include data files
-    # here
-    EXCLUDE_WILDCARDS = ['*.py', '*.pyc', '*.pyo', '*.pdf', '.git*']
-    EXCLUDE_DIRS = ['src', '__pycache__']
-    common_prefix = SETUP_DIRECTORY + os.path.sep
-    for root, dirs, files in os.walk(os.path.join(SETUP_DIRECTORY, 'obspy')):
-        root = root.replace(common_prefix, '')
-        for name in files:
-            if any(fnmatch.fnmatch(name, w) for w in EXCLUDE_WILDCARDS):
-                continue
-            config.add_data_files(os.path.join(root, name))
-        for folder in EXCLUDE_DIRS:
-            if folder in dirs:
-                dirs.remove(folder)
-
-    # Force include the contents of some directories.
-    FORCE_INCLUDE_DIRS = [
-        os.path.join(SETUP_DIRECTORY, 'obspy', 'io', 'mseed', 'src',
-                     'libmseed', 'test')]
-
-    for folder in FORCE_INCLUDE_DIRS:
-        for root, _, files in os.walk(folder):
-            for filename in files:
-                config.add_data_files(
-                    os.path.relpath(os.path.join(root, filename),
-                                    SETUP_DIRECTORY))
-
-    return config
-
-
 # Auto-generate man pages from --help output
 class Help2ManBuild(build):
     description = "Run help2man on scripts to produce man pages"
@@ -814,6 +777,23 @@ def setupPackage():
             'Topic :: Scientific/Engineering :: Physics'],
         keywords=KEYWORDS,
         packages=find_packages(),
+        package_data={
+            '': [
+                'RELEASE-VERSION', '*.txt', 'docs/*', 'tests/images/*',
+                'data/*', 'data/*/*', 'data/*/*/*', 'data/*/*/*/*',
+                'data/*/*/*/*/*',
+            ],
+            'obspy.io.mseed': [
+                'src/libmseed/test/*',
+                'src/libmseed/test/data/*.mseed',
+            ],
+            'obspy.io.xseed': [
+                'tests/blockette-tests/*',
+            ],
+        },
+        exclude_package_data={
+            '': ['docs/*.pdf'],
+        },
         namespace_packages=[],
         zip_safe=False,
         python_requires=f'>={MIN_PYTHON_VERSION[0]}.{MIN_PYTHON_VERSION[1]}',
@@ -823,7 +803,6 @@ def setupPackage():
         # this is needed for "easy_install obspy==dev"
         download_url=("https://github.com/obspy/obspy/zipball/master"
                       "#egg=obspy=dev"),
-        include_package_data=True,
         entry_points=ENTRY_POINTS,
         ext_modules=get_extensions(),
         ext_package='obspy.lib',
@@ -831,7 +810,6 @@ def setupPackage():
             'build_man': Help2ManBuild,
             'install_man': Help2ManInstall
         },
-        configuration=configuration,
     )
 
 
