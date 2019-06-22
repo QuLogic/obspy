@@ -20,21 +20,6 @@ For more information visit https://www.obspy.org.
     GNU Lesser General Public License, Version 3
     (https://www.gnu.org/copyleft/lesser.html)
 """
-# Importing setuptools monkeypatches some of distutils commands so things like
-# 'python setup.py develop' work. Wrap in try/except so it is not an actual
-# dependency. Inplace installation with pip works also without importing
-# setuptools.
-try:
-    import setuptools  # @UnusedImport # NOQA
-except ImportError:
-    pass
-
-try:
-    import numpy  # @UnusedImport # NOQA
-except ImportError:
-    msg = ("No module named numpy. "
-           "Please install numpy first, it is needed before installing ObsPy.")
-    raise ImportError(msg)
 
 import glob
 import inspect
@@ -42,15 +27,17 @@ import os
 import platform
 import subprocess
 import sys
+
+import setuptools
+
+from distutils.ccompiler import get_default_compiler
+from distutils.command.build import build
+from distutils.command.install import install
+from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.util import change_root
-from distutils.errors import DistutilsSetupError
 
-from numpy.distutils.core import setup
-from numpy.distutils.ccompiler import get_default_compiler
-from numpy.distutils.command.build import build
-from numpy.distutils.command.install import install
-from setuptools import Extension
+from setuptools import Extension, setup
 
 
 # The minimum python version which can be used to run ObsPy
@@ -563,7 +550,7 @@ def export_symbols(*path):
 
 # adds --with-system-libs command-line option if possible
 def add_features():
-    if 'setuptools' not in sys.modules or not hasattr(setuptools, 'Feature'):
+    if not hasattr(setuptools, 'Feature'):
         return {}
 
     class ExternalLibFeature(setuptools.Feature):
