@@ -732,6 +732,11 @@ def setupPackage():
         description=DOCSTRING[1],
         long_description="\n".join(DOCSTRING[3:]),
         url="https://www.obspy.org",
+        project_urls={
+            "Bug Tracker": "https://github.com/obspy/obspy/issues",
+            "Documentation": "https://docs.obspy.org/",
+            "Source Code": "https://github.com/obspy/obspy",
+        },
         author='The ObsPy Development Team',
         author_email='devs@obspy.org',
         license='GNU Lesser General Public License, Version 3 (LGPLv3)',
@@ -741,8 +746,8 @@ def setupPackage():
             'Environment :: Console',
             'Intended Audience :: Science/Research',
             'Intended Audience :: Developers',
-            'License :: OSI Approved :: GNU Library or ' +
-                'Lesser General Public License (LGPL)',
+            'License :: OSI Approved :: '
+                'GNU Lesser General Public License v3 (LGPLv3)',
             'Operating System :: OS Independent',
             'Programming Language :: Python',
             'Programming Language :: Python :: 3',
