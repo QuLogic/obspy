@@ -52,6 +52,7 @@ from numpy.distutils.ccompiler import get_default_compiler
 from numpy.distutils.command.build import build
 from numpy.distutils.command.install import install
 from numpy.distutils.misc_util import Configuration
+from setuptools import Extension
 
 
 # The minimum python version which can be used to run ObsPy
@@ -597,11 +598,11 @@ def add_features():
     }
 
 
-def configuration(parent_package="", top_path=None):
+def get_extensions():
     """
     Config function mainly used to compile C code.
     """
-    config = Configuration("", parent_package, top_path)
+    extensions = []
 
     # GSE2
     path = os.path.join("obspy", "io", "gse2", "src", "GSE_UTI")
@@ -611,8 +612,9 @@ def configuration(parent_package="", top_path=None):
     if IS_MSVC:
         # get export symbols
         kwargs['export_symbols'] = export_symbols(path, 'gse_functions.def')
-    config.add_extension(_get_lib_name("gse2", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("gse2", add_extension_suffix=False),
+                  files, **kwargs))
 
     # LIBMSEED
     path = os.path.join("obspy", "io", "mseed", "src")
@@ -631,8 +633,9 @@ def configuration(parent_package="", top_path=None):
             export_symbols(path, 'obspy-readbuffer.def')
     if EXTERNAL_LIBMSEED:
         kwargs['libraries'] = ['mseed']
-    config.add_extension(_get_lib_name("mseed", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("mseed", add_extension_suffix=False),
+                  files, **kwargs))
 
     # SEGY
     path = os.path.join("obspy", "io", "segy", "src")
@@ -642,8 +645,9 @@ def configuration(parent_package="", top_path=None):
     if IS_MSVC:
         # get export symbols
         kwargs['export_symbols'] = export_symbols(path, 'libsegy.def')
-    config.add_extension(_get_lib_name("segy", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("segy", add_extension_suffix=False),
+                  files, **kwargs))
 
     # SIGNAL
     path = os.path.join("obspy", "signal", "src")
@@ -653,8 +657,9 @@ def configuration(parent_package="", top_path=None):
     if IS_MSVC:
         # get export symbols
         kwargs['export_symbols'] = export_symbols(path, 'libsignal.def')
-    config.add_extension(_get_lib_name("signal", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("signal", add_extension_suffix=False),
+                  files, **kwargs))
 
     # EVALRESP
     path = os.path.join("obspy", "signal", "src")
@@ -671,8 +676,9 @@ def configuration(parent_package="", top_path=None):
         kwargs['export_symbols'] = export_symbols(path, 'libevresp.def')
     if EXTERNAL_EVALRESP:
         kwargs['libraries'] = ['evresp']
-    config.add_extension(_get_lib_name("evresp", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("evresp", add_extension_suffix=False),
+                  files, **kwargs))
 
     # TAU
     path = os.path.join("obspy", "taup", "src")
@@ -682,18 +688,18 @@ def configuration(parent_package="", top_path=None):
     if IS_MSVC:
         # get export symbols
         kwargs['export_symbols'] = export_symbols(path, 'libtau.def')
-    config.add_extension(_get_lib_name("tau", add_extension_suffix=False),
-                         files, **kwargs)
+    extensions.append(
+        Extension(_get_lib_name("tau", add_extension_suffix=False),
+                  files, **kwargs))
 
-    add_data_files(config)
-
-    return config
+    return extensions
 
 
-def add_data_files(config):
+def configuration(parent_package="", top_path=None):
     """
     Recursively include all non python files
     """
+    config = Configuration("", parent_package, top_path)
     # python files are included per default, we only include data files
     # here
     EXCLUDE_WILDCARDS = ['*.py', '*.pyc', '*.pyo', '*.pdf', '.git*']
@@ -720,6 +726,8 @@ def add_data_files(config):
                 config.add_data_files(
                     os.path.relpath(os.path.join(root, filename),
                                     SETUP_DIRECTORY))
+
+    return config
 
 
 # Auto-generate man pages from --help output
@@ -817,12 +825,14 @@ def setupPackage():
                       "#egg=obspy=dev"),
         include_package_data=True,
         entry_points=ENTRY_POINTS,
+        ext_modules=get_extensions(),
         ext_package='obspy.lib',
         cmdclass={
             'build_man': Help2ManBuild,
             'install_man': Help2ManInstall
         },
-        configuration=configuration)
+        configuration=configuration,
+    )
 
 
 if __name__ == '__main__':
